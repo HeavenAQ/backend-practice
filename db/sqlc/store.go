@@ -29,7 +29,7 @@ func (store *Store) execTrans(ctx context.Context, fn func(*Queries) error) erro
 	err = fn(q)
 	if err != nil {
 		log.Fatal("Failed to execute target query. Starting to roll back...", err)
-		if rbErr := tx.Rollback(); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
 			return fmt.Errorf("=== Failed to execute database transaction ===\nError: %v\nRollback Error: %v", err, rbErr)
 		}
 	}
@@ -52,8 +52,11 @@ type TransferTxResult struct {
 	ToEntry     Entry    `json:"to_entry"`
 }
 
+var txKey = struct{}{}
+
 func (store *Store) TransferTx(ctx context.Context, data TransferTxParams) (TransferTxResult, error) {
 	var result TransferTxResult
+	// txName := ctx.Value(txKey) -- for debugging
 
 	err := store.execTrans(ctx, func(q *Queries) error {
 		// declare error var
@@ -85,27 +88,16 @@ func (store *Store) TransferTx(ctx context.Context, data TransferTxParams) (Tran
 		}
 
 		// INFO: Deal with the account balance
-		fromAccount, err := q.GetAccount(ctx, data.FromAccountID)
-		if err != nil {
-			return err
-		}
-
-		toAccount, err := q.GetAccount(ctx, data.ToAccountID)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Before Transfer:  ==> From: %v To: %v\n", fromAccount.Balance, toAccount.Balance)
-
-		if result.FromAccount, err = q.UpdateAccount(ctx, UpdateAccountParams{
-			ID:      data.FromAccountID,
-			Balance: fromAccount.Balance - data.Amount,
+		if result.FromAccount, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+			ID:     data.FromAccountID,
+			Amount: -data.Amount,
 		}); err != nil {
 			return err
 		}
 
-		if result.ToAccount, err = q.UpdateAccount(ctx, UpdateAccountParams{
-			ID:      data.ToAccountID,
-			Balance: toAccount.Balance + data.Amount,
+		if result.ToAccount, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+			ID:     data.ToAccountID,
+			Amount: data.Amount,
 		}); err != nil {
 			return err
 		}
@@ -113,7 +105,5 @@ func (store *Store) TransferTx(ctx context.Context, data TransferTxParams) (Tran
 		return nil
 	})
 
-	fmt.Printf("After Transfer:  ==> From: %v To: %v\n", result.FromAccount.Balance, result.ToAccount.Balance)
-	fmt.Print("========================================\n")
 	return result, err
 }

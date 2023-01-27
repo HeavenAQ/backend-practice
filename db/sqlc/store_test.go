@@ -20,7 +20,7 @@ func TestTransferTx(t *testing.T) {
 
 	account1 := CreateRandomAccount(t)
 	account2 := CreateRandomAccount(t)
-	//fmt.Printf("Before ==> Account1: %v Account2: %v\n", account1.Balance, account2.Balance)
+	fmt.Printf("Before ==> Account1: %v Account2: %v\n", account1.Balance, account2.Balance)
 
 	// run a concurrent database transaction
 	n := 5
@@ -38,8 +38,6 @@ func TestTransferTx(t *testing.T) {
 			})
 			errs <- err
 			results <- result
-			fmt.Printf("After Transfer:  ==> From: %v To: %v\n", result.FromAccount.Balance, result.ToAccount.Balance)
-			fmt.Print("========================================\n")
 		}()
 	}
 
@@ -85,7 +83,7 @@ func TestTransferTx(t *testing.T) {
 		require.NotEmpty(t, toAccount)
 		require.Equal(t, toAccount.ID, account2.ID)
 
-		//fmt.Printf("Tx ==> Account1: %v Account2: %v\n", account1.Balance, account2.Balance)
+		fmt.Printf("Tx ==> Account1: %v Account2: %v\n", fromAccount.Balance, toAccount.Balance)
 
 		// check balance
 		diff1 := account1.Balance - fromAccount.Balance
@@ -96,7 +94,7 @@ func TestTransferTx(t *testing.T) {
 		// check difference is the multiples of the given amount
 		require.True(t, diff1%amount == 0)
 		k := int(diff1 / amount)
-		require.True(t, k >= 1 && k <= 2)
+		require.True(t, k >= 1 && k <= n)
 		require.NotContains(t, existed, k)
 		existed[k] = true
 	}
@@ -109,8 +107,8 @@ func TestTransferTx(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, updatedAccount2)
 
-	fmt.Printf("After ==> Account1: %v Account2: %v\n", account1.Balance, account2.Balance)
+	fmt.Printf("After ==> Account1: %v Account2: %v\n", updatedAccount1.Balance, updatedAccount2.Balance)
 	require.Equal(t, account1.Balance-int64(amount)*int64(n), updatedAccount1.Balance)
-	require.Equal(t, account1.Balance+int64(amount)*int64(n), updatedAccount2.Balance)
+	require.Equal(t, account2.Balance+int64(amount)*int64(n), updatedAccount2.Balance)
 
 }
