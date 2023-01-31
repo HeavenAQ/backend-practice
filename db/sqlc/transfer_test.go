@@ -49,8 +49,8 @@ func TestUpdateTransfer(t *testing.T) {
 	transfer1 := CreateRandomTransfer(t)
 	args := UpdateTransferParams{
 		ID:            transfer1.ID,
-		FromAccountID: transfer1.ID,
-		ToAccountID:   transfer1.ID,
+		FromAccountID: transfer1.FromAccountID,
+		ToAccountID:   transfer1.ToAccountID,
 		Amount:        utils.RandomMoney(),
 	}
 
